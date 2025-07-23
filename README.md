@@ -30,6 +30,15 @@ Unlike traditional deep learning models, CTM mimics **temporal reasoning** by al
 
 ---
 
+
+## Results
+
+
+- **Test Loss:**  0.0156
+- **Test Accuracy:** 0.9962
+
+ 
+
 ## 📽 Explainability Example
 
 > CTM’s attention evolves over time — below is a GIF of the model progressively focusing on different regions of an MRI scan as it determines the presence of a tumor.
