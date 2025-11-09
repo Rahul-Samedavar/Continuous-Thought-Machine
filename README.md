@@ -52,7 +52,7 @@ Unlike traditional deep learning models, CTM mimics **temporal reasoning** by al
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/ctm-brain-tumor-classification.git
+git clone https://github.com/Rahul-Samedavar/Continuous-Thought-Machine.git
 cd ctm-brain-tumor-classification
 
 2. Install dependencies
