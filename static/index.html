@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CTM Brain Tumor Inference</title>
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-color: #0b0e14;
+      --card-bg: #151923;
+      --card-border: #2a2f3d;
+      --accent-color: #3b82f6; /* Blue */
+      --accent-hover: #2563eb;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+
+    /* Main Container */
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
+
+    @media(min-width: 900px) {
+      .container { grid-template-columns: 350px 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+    }
+
+    h2 { font-size: 1.2rem; margin-bottom: 20px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px; }
+
+    /* Upload Section */
+    .upload-area {
+      border: 2px dashed var(--card-border);
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      background: rgba(255,255,255,0.02);
+    }
+
+    .upload-area:hover, .upload-area.dragover {
+      border-color: var(--accent-color);
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .upload-icon {
+      font-size: 40px;
+      color: var(--text-muted);
+      margin-bottom: 15px;
+    }
+
+    #fileInput { display: none; }
+
+    .preview-container {
+      margin-top: 20px;
+      display: none;
+    }
+    
+    .preview-container img {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+
+    button.btn-primary {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+      width: 100%;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+
+    button.btn-primary:hover { background: var(--accent-hover); }
+    button.btn-primary:disabled { background: var(--card-border); cursor: not-allowed; }
+
+    /* Results Section */
+    #results-area {
+      display: none; /* Hidden by default */
+      flex-direction: column;
+      gap: 24px;
+      animation: slideUp 0.5s ease-out;
+    }
+
+    /* Prediction Banner */
+    .prediction-banner {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid var(--success);
+      color: var(--success);
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .prediction-banner.danger {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .pred-label { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .pred-value { font-size: 2rem; font-weight: 700; }
+    .pred-conf { font-size: 1.2rem; font-weight: 600; opacity: 0.9; }
+
+    /* Grid for Visuals and Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    @media(min-width: 1000px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
+
+    /* Class Probabilities */
+    .prob-row {
+      margin-bottom: 15px;
+    }
+    .prob-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-size: 0.9rem;
+    }
+    .progress-bar-bg {
+      background: #2a2f3d;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent-color);
+      width: 0%;
+      transition: width 1s ease-in-out;
+      border-radius: 4px;
+    }
+
+    /* Visual Attention */
+    .attention-box img {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+
+    /* Chart Container */
+    .chart-container {
+      position: relative;
+      height: 250px;
+      width: 100%;
+    }
+
+    /* Loading Overlay */
+    .loader-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(11, 14, 20, 0.85);
+      backdrop-filter: blur(5px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 1000;
+    }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255,255,255,0.1);
+      border-top: 4px solid var(--accent-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    /* Animations */
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  </style>
+</head>
+<body>
+
+  <!-- Loading State -->
+  <div class="loader-overlay" id="loader">
+    <div class="spinner"></div>
+    <p>Model is thinking...</p>
+  </div>
+
+  <header>
+    <h1>CTM Brain Tumor Inference</h1>
+    <p class="subtitle">Continuous Thought Model Analysis & Visualization</p>
+  </header>
+
+  <div class="container">
+    
+    <!-- Left Column: Input -->
+    <div class="card">
+      <h2>Input Image</h2>
+      <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="upload-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <p>Click to upload or drag & drop MRI scan</p>
+        <input type="file" id="fileInput" accept="image/*" />
+      </div>
+
+      <div class="preview-container" id="previewContainer">
+        <p style="margin-bottom: 10px; font-size: 0.9rem; color: var(--text-muted);">Selected Image:</p>
+        <img id="imagePreview" src="" alt="MRI Preview" />
+      </div>
+
+      <button class="btn-primary" onclick="runInference()" id="runBtn" disabled>Run Analysis</button>
+    </div>
+
+    <!-- Right Column: Results -->
+    <div id="results-area">
+      
+      <!-- Prediction Banner -->
+      <div class="card">
+        <div class="prediction-banner" id="predBanner">
+          <div>
+            <div class="pred-label">Predicted Class</div>
+            <div class="pred-value" id="predClass">--</div>
+          </div>
+          <div style="text-align: right;">
+            <div class="pred-label">Confidence</div>
+            <div class="pred-conf" id="predConf">--%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <!-- Class Probabilities -->
+        <div class="card">
+          <h2>Class Probabilities</h2>
+          <div id="probContainer">
+            <!-- JS will populate this -->
+          </div>
+        </div>
+
+        <!-- Attention Visualization -->
+        <div class="card attention-box">
+          <h2>Visual Attention</h2>
+          <img id="attentionGif" src="" alt="Visual Attention Map" />
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">
+            Heatmap shows regions the model focused on during inference.
+          </p>
+        </div>
+      </div>
+
+      <!-- Certainty Curve Chart -->
+      <div class="card">
+        <h2>Thinking Process (Certainty Curve)</h2>
+        <div class="chart-container">
+          <canvas id="certaintyChart"></canvas>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">
+          This curve represents the model's confidence accumulating over time steps.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // --- UI Logic ---
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewContainer = document.getElementById('previewContainer');
+    const runBtn = document.getElementById('runBtn');
+    const loader = document.getElementById('loader');
+    const resultsArea = document.getElementById('results-area');
+    
+    // Chart Instance
+    let certaintyChartInstance = null;
+
+    // Handle File Selection
+    fileInput.addEventListener('change', handleFileSelect);
+
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        handleFileSelect();
+      }
+    });
+
+    function handleFileSelect() {
+      if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          imagePreview.src = e.target.result;
+          previewContainer.style.display = 'block';
+          runBtn.disabled = false;
+          // Reset results if new image
+          resultsArea.style.display = 'none';
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      }
+    }
+
+    // --- Inference Logic ---
+    async function runInference() {
+      if (!fileInput.files.length) return;
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      // Show Loader
+      loader.style.display = 'flex';
+      
+      try {
+        const res = await fetch("/inference", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!res.ok) throw new Error("API Request Failed");
+
+        const data = await res.json();
+        
+        // Hide Loader
+        loader.style.display = 'none';
+        
+        // Render Results
+        renderResults(data);
+
+      } catch (err) {
+        loader.style.display = 'none';
+        alert("Inference failed. Check console for details.");
+        console.error(err);
+      }
+    }
+
+    function renderResults(data) {
+      resultsArea.style.display = 'flex';
+
+      // 1. Prediction Banner
+      const predClassEl = document.getElementById('predClass');
+      const predConfEl = document.getElementById('predConf');
+      const banner = document.getElementById('predBanner');
+
+      // Map class names to readable formats
+      const classMap = {
+        'notumor': 'No Tumor',
+        'glioma': 'Glioma',
+        'meningioma': 'Meningioma',
+        'pituitary': 'Pituitary Tumor'
+      };
+      
+      const readableClass = classMap[data.predicted_class] || data.predicted_class;
+      predClassEl.textContent = readableClass;
+      predConfEl.textContent = (data.confidence * 100).toFixed(1) + '%';
+
+      // Change banner color based on result
+      if (data.predicted_class === 'notumor') {
+        banner.className = 'prediction-banner'; // Default Green
+      } else {
+        banner.className = 'prediction-banner danger'; // Red for tumors
+      }
+
+      // 2. Class Probabilities
+      const probContainer = document.getElementById('probContainer');
+      probContainer.innerHTML = ''; // Clear previous
+
+      // Sort probabilities
+      const sortedProbs = Object.entries(data.class_probabilities)
+        .sort(([,a], [,b]) => b - a);
+
+      sortedProbs.forEach(([cls, prob]) => {
+        const percentage = (prob * 100).toFixed(1);
+        const name = classMap[cls] || cls;
+        const isSelected = cls === data.predicted_class;
+        
+        const html = `
+          <div class="prob-row">
+            <div class="prob-header">
+              <span style="color: ${isSelected ? '#fff' : 'var(--text-muted)'}">${name}</span>
+              <span>${percentage}%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" style="width: ${percentage}%; background: ${isSelected ? (cls === 'notumor' ? 'var(--success)' : 'var(--danger)') : '#4b5563'}"></div>
+            </div>
+          </div>
+        `;
+        probContainer.innerHTML += html;
+      });
+
+      // 3. Visual Attention GIF
+      const attentionGif = document.getElementById('attentionGif');
+      // Append timestamp to force reload image if URL is same but content changed
+      attentionGif.src = `${data.gif_url}?t=${new Date().getTime()}`;
+
+      // 4. Certainty Curve Chart
+      renderChart(data.certainty_curve);
+      
+      // Scroll to results
+      resultsArea.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function renderChart(dataPoints) {
+      const ctx = document.getElementById('certaintyChart').getContext('2d');
+      
+      // Destroy existing chart if present
+      if (certaintyChartInstance) {
+        certaintyChartInstance.destroy();
+      }
+
+      // Create labels (1 to N)
+      const labels = dataPoints.map((_, i) => i + 1);
+
+      certaintyChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Certainty',
+            data: dataPoints,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderWidth: 2,
+            pointRadius: 0, // Hide points for clean line
+            fill: true,
+            tension: 0.4 // Smooth curves
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false, color: '#2a2f3d' },
+              ticks: { color: '#9ca3af', maxTicksLimit: 10 },
+              title: { display: true, text: 'Thinking Steps', color: '#6b7280' }
+            },
+            y: {
+              grid: { color: '#2a2f3d' },
+              ticks: { color: '#9ca3af' },
+              min: 0,
+              max: 1
+            }
+          },
+          animation: {
+            x: {
+              type: 'number',
+              easing: 'linear',
+              duration: 1000,
+              from: NaN, // the point is initially skipped
+              delay(ctx) {
+                if (ctx.type !== 'data' || ctx.xStarted) {
+                  return 0;
+                }
+                ctx.xStarted = true;
+                return ctx.index * 5; // Sequential rendering effect
+              }
+            }
+          }
+        }
+      });
+    }
+
+  </script>
+</body>
+</html>

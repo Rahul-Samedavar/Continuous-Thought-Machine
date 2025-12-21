@@ -431,7 +431,7 @@ def inference(filename, model, output_path="output"):
 
 if __name__ == "__main__":
     
-    filepath = r"dataset\train\pituitary\Tr-pi_0014.jpg"
+    filepath = r"mri_gbm3.jpg"
 
 
     inference(filepath, model)
